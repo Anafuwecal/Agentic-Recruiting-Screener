@@ -1,15 +1,16 @@
-import { SCORING } from '../config/rubric';
+import { SCORING } from '../config/rubric.js';
 import {
-  prisma,
   getActiveJobRequirement,
   createOrUpdateCandidate,
   createApplication,
   updateApplicationStatus,
   recordScore,
   logAudit,
-} from './database';
-import { sendEmailToEmployer, sendEmailToCandidate } from './mailer';
-import { broadcastToEmployer } from './websocket';
+  saveChatMessage,
+  getAllCandidates,
+} from '../database/queries.js';
+import { sendEmailToEmployer, sendEmailToCandidate } from './mailer.js';
+import { broadcastToEmployer } from './websocket.js';
 
 export async function runRecruitmentPipeline(
   emailText: string,

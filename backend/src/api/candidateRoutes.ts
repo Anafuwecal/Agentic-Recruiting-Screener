@@ -1,20 +1,15 @@
 import { Hono } from 'hono';
-import { prisma } from '../services/database';
+import { getAllCandidates, getCandidateById } from '../database/queries.js';
 
 export function createCandidateRoutes() {
   const app = new Hono();
 
   app.get('/', async (c) => {
     try {
-      const candidates = await prisma.candidate.findMany({
-        include: {
-          applications: true,
-          scores: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      const candidates = await getAllCandidates();
       return c.json({ candidates });
-    } catch (err) {
+    } catch (err: any) {
+      console.error('[API] Error fetching candidates:', err);
       return c.json({ error: 'Failed to fetch candidates' }, 500);
     }
   });
@@ -22,16 +17,15 @@ export function createCandidateRoutes() {
   app.get('/:id', async (c) => {
     try {
       const { id } = c.req.param();
-      const candidate = await prisma.candidate.findUnique({
-        where: { id },
-        include: {
-          applications: true,
-          scores: true,
-          auditLogs: true,
-        },
-      });
+      const candidate = await getCandidateById(id);
+      
+      if (!candidate) {
+        return c.json({ error: 'Candidate not found' }, 404);
+      }
+      
       return c.json({ candidate });
-    } catch (err) {
+    } catch (err: any) {
+      console.error('[API] Error fetching candidate:', err);
       return c.json({ error: 'Failed to fetch candidate' }, 500);
     }
   });

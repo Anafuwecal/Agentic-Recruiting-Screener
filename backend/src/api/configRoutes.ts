@@ -1,16 +1,20 @@
 import { Hono } from 'hono';
-import { prisma } from '../services/database';
+import {
+  getActiveJobRequirement,
+  deactivateAllJobRequirements,
+  createJobRequirement,
+  getActiveWebhookConfig,
+  createOrUpdateWebhookConfig,
+} from '../database/queries.js';
 
 export function createConfigRoutes() {
   const app = new Hono();
 
   app.get('/job', async (c) => {
     try {
-      const job = await prisma.jobRequirement.findFirst({
-        where: { isActive: true },
-      });
+      const job = await getActiveJobRequirement();
       return c.json({ job });
-    } catch (err) {
+    } catch (err: any) {
       return c.json({ error: 'Failed to fetch job' }, 500);
     }
   });
@@ -19,31 +23,23 @@ export function createConfigRoutes() {
     try {
       const data = await c.req.json();
       
-      await prisma.jobRequirement.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      });
-
-      const job = await prisma.jobRequirement.create({
-        data: {
-          ...data,
-          isActive: true,
-        },
+      await deactivateAllJobRequirements();
+      const job = await createJobRequirement({
+        ...data,
+        isActive: true,
       });
 
       return c.json({ job });
-    } catch (err) {
+    } catch (err: any) {
       return c.json({ error: 'Failed to update job' }, 500);
     }
   });
 
   app.get('/webhook', async (c) => {
     try {
-      const config = await prisma.webhookConfig.findFirst({
-        where: { isActive: true },
-      });
+      const config = await getActiveWebhookConfig();
       return c.json({ config });
-    } catch (err) {
+    } catch (err: any) {
       return c.json({ error: 'Failed to fetch webhook config' }, 500);
     }
   });
@@ -51,21 +47,9 @@ export function createConfigRoutes() {
   app.put('/webhook', async (c) => {
     try {
       const data = await c.req.json();
-      
-      await prisma.webhookConfig.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      });
-
-      const config = await prisma.webhookConfig.create({
-        data: {
-          ...data,
-          isActive: true,
-        },
-      });
-
+      const config = await createOrUpdateWebhookConfig(data);
       return c.json({ config });
-    } catch (err) {
+    } catch (err: any) {
       return c.json({ error: 'Failed to update webhook' }, 500);
     }
   });
