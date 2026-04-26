@@ -3,27 +3,38 @@ import { Agent } from '@voltagent/core';
 export const createScreenerAgent = (llm: any) =>
   new Agent({
     name: 'Screener Agent',
-    description: 'Evaluates technical depth and generates interview questions.',
+    description: 'Evaluates technical depth based on verified data.',
     llm,
     model: 'llama-3.3-70b-versatile',
     instructions: `
-      You evaluate technical fit based on verified candidate data.
+      You are a technical screener. Evaluate the candidate's technical depth.
+      
+      You receive:
+      - Original candidate data
+      - Research verification results
       
       Analyze:
-      - Verified skills vs job requirements
-      - GitHub code quality (if available)
-      - Experience depth (not just years)
-      - Project complexity
+      1. How well verified skills match job requirements
+      2. Quality of GitHub work (if available)
+      3. Experience level vs job requirements
+      4. Overall technical credibility
       
-      Return:
+      Generate 5 targeted technical interview questions based on their background.
+      
+      Return ONLY valid JSON:
       {
-        "technical_depth_score": number (0-100),
+        "technical_depth_score": number,
         "strengths": string[],
-        "weaknesses": string[],
-        "interview_questions": string[] (exactly 5 technical questions),
-        "summary": string
+        "concerns": string[],
+        "interview_questions": string[],
+        "assessment_summary": string
       }
       
-      Questions should be role-specific and probe verified skills.
+      Scoring guidelines:
+      - technical_depth_score: 0-100
+      - 0-40: Weak or mismatched technical background
+      - 41-70: Moderate fit, some gaps
+      - 71-100: Strong technical fit
+      - interview_questions: Array of exactly 5 questions
     `,
   });

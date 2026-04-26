@@ -4,33 +4,50 @@ import { z } from 'zod';
 
 export const googleSearchTool = createTool({
   name: 'google_search',
-  description: 'Searches Google for professional presence verification.',
+  description: 'Searches Google for professional presence of a person.',
   parameters: z.object({
-    query: z.string().describe('Search query'),
+    query: z.string().describe('Search query (e.g., "John Doe developer")'),
   }),
   execute: async ({ query }) => {
     try {
+      const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+      const cx = process.env.GOOGLE_SEARCH_CX;
+
+      if (!apiKey || !cx) {
+        return {
+          success: false,
+          error: 'Google Search API not configured',
+        };
+      }
+
       const response = await axios.get(
         `https://www.googleapis.com/customsearch/v1`,
         {
           params: {
-            key: process.env.GOOGLE_SEARCH_API_KEY,
-            cx: process.env.GOOGLE_SEARCH_CX,
+            key: apiKey,
+            cx: cx,
             q: query,
             num: 5,
           },
         }
       );
 
+      const items = response.data.items || [];
+      
       return {
-        results: response.data.items?.map((item: any) => ({
+        success: true,
+        results: items.map((item: any) => ({
           title: item.title,
           link: item.link,
           snippet: item.snippet,
-        })) || [],
+        })),
       };
-    } catch (err) {
-      return { error: 'Google Search failed or quota exceeded' };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: 'Google Search failed',
+        details: err.message,
+      };
     }
   },
 });

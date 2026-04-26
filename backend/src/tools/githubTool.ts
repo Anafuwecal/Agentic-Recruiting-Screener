@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 export const githubTool = createTool({
   name: 'github_lookup',
-  description: 'Looks up a GitHub profile and returns repos, languages, activity.',
+  description: 'Looks up a GitHub profile and returns repos, languages, contribution activity.',
   parameters: z.object({
     username: z.string().describe('GitHub username to look up'),
   }),
@@ -16,10 +16,7 @@ export const githubTool = createTool({
 
       const [profile, repos] = await Promise.all([
         axios.get(`https://api.github.com/users/${username}`, { headers }),
-        axios.get(
-          `https://api.github.com/users/${username}/repos?sort=updated&per_page=10`,
-          { headers }
-        ),
+        axios.get(`https://api.github.com/users/${username}/repos?sort=updated&per_page=10`, { headers }),
       ]);
 
       const languages = repos.data
@@ -28,6 +25,7 @@ export const githubTool = createTool({
         .filter((v: string, i: number, a: string[]) => a.indexOf(v) === i);
 
       return {
+        success: true,
         name: profile.data.name,
         bio: profile.data.bio,
         public_repos: profile.data.public_repos,
@@ -38,10 +36,15 @@ export const githubTool = createTool({
           stars: r.stargazers_count,
           description: r.description,
           language: r.language,
+          updated_at: r.updated_at,
         })),
       };
-    } catch (err) {
-      return { error: `GitHub profile not found or rate limited: ${username}` };
+    } catch (err: any) {
+      return { 
+        success: false,
+        error: `GitHub profile not found or rate limited for: ${username}`,
+        details: err.message 
+      };
     }
   },
 });
