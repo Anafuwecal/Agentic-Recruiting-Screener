@@ -1,7 +1,6 @@
-import { VoltAgent } from '@voltagent/core';
-import { HonoServer } from '@voltagent/server-hono';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { serve } from '@hono/node-server';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -299,14 +298,20 @@ app.get('/api/stats', async (c) => {
   }
 });
 
-// Initialize VoltAgent server
+// Start server
 const PORT = parseInt(process.env.PORT || '3141');
 
-new VoltAgent({
-  agents,
-  server: new HonoServer({ app, port: PORT }),
-});
-
-console.log(`\nServer running on http://localhost:${PORT}`);
+console.log('\n' + '='.repeat(60));
+console.log('  AI RECRUITMENT SCREENER - Starting...');
+console.log('='.repeat(60));
+console.log(`Server starting on http://localhost:${PORT}`);
 console.log(`Webhook endpoint: http://localhost:${PORT}/webhook/email`);
-console.log(`Chat endpoint: http://localhost:${PORT}/api/chat\n`);
+console.log(`Chat endpoint: http://localhost:${PORT}/api/chat`);
+console.log('='.repeat(60) + '\n');
+
+serve({
+  fetch: app.fetch,
+  port: PORT,
+}, (info) => {
+  console.log(`✓ Server is running on http://localhost:${info.port}\n`);
+});
