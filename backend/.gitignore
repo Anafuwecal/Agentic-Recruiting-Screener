@@ -1,2 +1,27 @@
-node_modules
+# Dependencies
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Environment variables
 .env
+.env.local
+.env.production
+
+# Build output
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Audit
+audit_log.json
