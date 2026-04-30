@@ -4,10 +4,7 @@
       <div class="header-content">
         <div class="brand">
           <div class="logo">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="8" fill="#8B7355"/>
-              <path d="M12 20L18 26L28 14" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <img src="/frontend/public/icon-r.png" alt="Recruitment AI Logo" width="40" height="40">
           </div>
           <div>
             <h1>Recruitment AI</h1>

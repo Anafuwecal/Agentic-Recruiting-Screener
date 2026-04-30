@@ -36,7 +36,12 @@ const app = new Hono();
 
 // Enable CORS for frontend
 app.use('/*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:3141'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3141',
+    'https://agentic-recruiting-screener.vercel.app',
+    'https://*.vercel.app'
+  ],
   credentials: true,
 }));
 
