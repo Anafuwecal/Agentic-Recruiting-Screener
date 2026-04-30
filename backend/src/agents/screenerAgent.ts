@@ -3,7 +3,6 @@ import { Agent } from '@voltagent/core';
 export const createScreenerAgent = (llm: any) =>
   new Agent({
     name: 'Screener Agent',
-    description: 'Evaluates technical depth based on verified data.',
     llm,
     model: 'llama-3.3-70b-versatile',
     instructions: `

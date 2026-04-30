@@ -3,7 +3,6 @@ import { Agent } from '@voltagent/core';
 export const createJudgeAgent = (llm: any) =>
   new Agent({
     name: 'Judge Agent',
-    description: 'Makes final hiring decision with reasoning.',
     llm,
     model: 'llama-3.3-70b-versatile',
     instructions: `

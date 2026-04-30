@@ -5,7 +5,6 @@ import { googleSearchTool } from '../tools/googleSearchTool';
 export const createResearcherAgent = (llm: any) =>
   new Agent({
     name: 'Researcher Agent',
-    description: 'Verifies candidate claims. Detects resume fluff.',
     llm,
     model: 'llama-3.3-70b-versatile',
     tools: [githubTool, googleSearchTool],

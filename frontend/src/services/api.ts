@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const baseURL = import.meta.env.VITE_API_URL || 
+                (import.meta.env.PROD 
+                  ? 'https://agentic-recruiting-screener.onrender.com' 
+                  : 'http://localhost:3141');
+
 const api = axios.create({
-  baseURL: 'http://localhost:3141',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

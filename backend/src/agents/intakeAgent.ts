@@ -3,7 +3,6 @@ import { Agent } from '@voltagent/core';
 export const createIntakeAgent = (llm: any) =>
   new Agent({
     name: 'Intake Agent',
-    description: 'Parses raw application email into structured candidate JSON.',
     llm,
     model: 'llama-3.3-70b-versatile',
     instructions: `

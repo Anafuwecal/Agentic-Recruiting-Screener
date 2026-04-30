@@ -4,7 +4,6 @@ import { calendarTool } from '../tools/calendarTool';
 export const createCoordinatorAgent = (llm: any) =>
   new Agent({
     name: 'Coordinator Agent',
-    description: 'Schedules interviews when authorized by Orchestrator.',
     llm,
     model: 'llama-3.3-70b-versatile',
     tools: [calendarTool],
