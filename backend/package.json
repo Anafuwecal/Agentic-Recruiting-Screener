@@ -7,10 +7,8 @@
     "node": ">=18.0.0 <26.0.0"
   },
    "scripts": {
-    "dev": "npm run convex:dev & tsx watch src/index.ts",
-    "convex:dev": "convex dev",
-    "convex:deploy": "convex deploy",
-    "build": "npm run convex:deploy && tsc --skipLibCheck || echo 'TypeScript compilation had warnings'",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --skipLibCheck || echo 'TypeScript compilation had warnings'",
     "start": "node dist/index.js",
     "start:dev": "tsx src/index.ts"
   },
