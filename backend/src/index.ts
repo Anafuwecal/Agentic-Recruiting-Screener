@@ -255,20 +255,47 @@ app.post('/webhook/slack/interactive', async (c) => {
 app.get('/api/stats', async (c) => {
   try {
     const candidates = await db.listCandidates();
+    
+    // Handle empty candidates array safely
     const stats = {
-      total: candidates.length,
-      new: candidates.filter((c: any) => c.status === 'NEW').length,
-      processing: candidates.filter((c: any) => c.status === 'PROCESSING').length,
-      accepted: candidates.filter((c: any) => c.status === 'ACCEPTED').length,
-      rejected: candidates.filter((c: any) => c.status === 'REJECTED').length,
-      human_review: candidates.filter((c: any) => c.status === 'HUMAN_REVIEW').length,
-      interviewed: candidates.filter((c: any) => c.interview_scheduled).length,
+      total: candidates.length || 0,
+      new: candidates.filter((c: any) => c.status === 'NEW').length || 0,
+      processing: candidates.filter((c: any) => c.status === 'PROCESSING').length || 0,
+      accepted: candidates.filter((c: any) => c.status === 'ACCEPTED').length || 0,
+      rejected: candidates.filter((c: any) => c.status === 'REJECTED').length || 0,
+      human_review: candidates.filter((c: any) => c.status === 'HUMAN_REVIEW').length || 0,
+      interviewed: candidates.filter((c: any) => c.interview_scheduled === true).length || 0,
     };
+    
     return c.json({ stats });
   } catch (err: any) {
     console.error('Stats error:', err);
-    return c.json({ error: 'Failed to fetch stats', details: err.message }, 500);
+    // Return default stats instead of error
+    return c.json({ 
+      stats: {
+        total: 0,
+        new: 0,
+        processing: 0,
+        accepted: 0,
+        rejected: 0,
+        human_review: 0,
+        interviewed: 0,
+      }
+    });
   }
+});
+
+// System status check
+app.get('/api/system/status', async (c) => {
+  const status = {
+    server: 'online',
+    database: databases ? 'appwrite' : 'in-memory',
+    appwrite_configured: isAppwriteConfigured,
+    groq_configured: Boolean(process.env.GROQ_API_KEY),
+    email_configured: Boolean(process.env.EMPLOYER_EMAIL && process.env.GMAIL_APP_PASSWORD),
+  };
+  
+  return c.json(status);
 });
 
 const PORT = parseInt(process.env.PORT || '10000');

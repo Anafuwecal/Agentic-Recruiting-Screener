@@ -14,18 +14,23 @@ let JOBS_COLLECTION = '';
 let CHATS_COLLECTION = '';
 
 if (isAppwriteConfigured) {
-  const client = new Client()
-    .setEndpoint(process.env.APPWRITE_ENDPOINT!)
-    .setProject(process.env.APPWRITE_PROJECT_ID!)
-    .setKey(process.env.APPWRITE_API_KEY!);
+  try {
+    const client = new Client()
+      .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+      .setProject(process.env.APPWRITE_PROJECT_ID!)
+      .setKey(process.env.APPWRITE_API_KEY!);
 
-  databases = new Databases(client);
-  DB_ID = process.env.APPWRITE_DATABASE_ID!;
-  CANDIDATES_COLLECTION = process.env.APPWRITE_CANDIDATES_COLLECTION_ID!;
-  JOBS_COLLECTION = process.env.APPWRITE_JOBS_COLLECTION_ID!;
-  CHATS_COLLECTION = process.env.APPWRITE_CHATS_COLLECTION_ID!;
+    databases = new Databases(client);
+    DB_ID = process.env.APPWRITE_DATABASE_ID!;
+    CANDIDATES_COLLECTION = process.env.APPWRITE_CANDIDATES_COLLECTION_ID!;
+    JOBS_COLLECTION = process.env.APPWRITE_JOBS_COLLECTION_ID!;
+    CHATS_COLLECTION = process.env.APPWRITE_CHATS_COLLECTION_ID!;
 
-  console.log('Appwrite connected successfully');
+    console.log('✓ Appwrite connected successfully');
+  } catch (err) {
+    console.error('✗ Appwrite connection failed:', err);
+    console.log('⚠️  Falling back to in-memory storage');
+  }
 } else {
   console.warn('⚠️  Appwrite not configured. Using in-memory storage (data will be lost on restart)');
 }
@@ -94,177 +99,238 @@ export interface ChatMessage {
 export const db = {
   // Candidates
   async createCandidate(candidate: Omit<Candidate, '$id'>) {
-    if (databases) {
-      return await databases.createDocument(
-        DB_ID,
-        CANDIDATES_COLLECTION,
-        ID.unique(),
-        candidate
-      );
-    } else {
-      const id = `candidate_${Date.now()}_${Math.random()}`;
-      const doc = { $id: id, ...candidate };
-      memoryStorage.candidates.set(id, doc);
-      return doc;
+    try {
+      if (databases) {
+        return await databases.createDocument(
+          DB_ID,
+          CANDIDATES_COLLECTION,
+          ID.unique(),
+          candidate
+        );
+      } else {
+        const id = `candidate_${Date.now()}_${Math.random()}`;
+        const doc = { $id: id, ...candidate };
+        memoryStorage.candidates.set(id, doc);
+        return doc;
+      }
+    } catch (err) {
+      console.error('Error creating candidate:', err);
+      throw err;
     }
   },
 
   async updateCandidate(candidateId: string, updates: Partial<Candidate>) {
-    if (databases) {
-      return await databases.updateDocument(
-        DB_ID,
-        CANDIDATES_COLLECTION,
-        candidateId,
-        updates
-      );
-    } else {
-      const existing = memoryStorage.candidates.get(candidateId);
-      if (existing) {
-        const updated = { ...existing, ...updates };
-        memoryStorage.candidates.set(candidateId, updated);
-        return updated;
+    try {
+      if (databases) {
+        return await databases.updateDocument(
+          DB_ID,
+          CANDIDATES_COLLECTION,
+          candidateId,
+          updates
+        );
+      } else {
+        const existing = memoryStorage.candidates.get(candidateId);
+        if (existing) {
+          const updated = { ...existing, ...updates };
+          memoryStorage.candidates.set(candidateId, updated);
+          return updated;
+        }
+        throw new Error('Candidate not found');
       }
-      throw new Error('Candidate not found');
+    } catch (err) {
+      console.error('Error updating candidate:', err);
+      throw err;
     }
   },
 
   async getCandidate(candidateId: string) {
-    if (databases) {
-      return await databases.getDocument(DB_ID, CANDIDATES_COLLECTION, candidateId);
-    } else {
-      const candidate = memoryStorage.candidates.get(candidateId);
-      if (!candidate) throw new Error('Candidate not found');
-      return candidate;
+    try {
+      if (databases) {
+        return await databases.getDocument(DB_ID, CANDIDATES_COLLECTION, candidateId);
+      } else {
+        const candidate = memoryStorage.candidates.get(candidateId);
+        if (!candidate) throw new Error('Candidate not found');
+        return candidate;
+      }
+    } catch (err) {
+      console.error('Error getting candidate:', err);
+      throw err;
     }
   },
 
   async getCandidateByEmail(email: string) {
-    if (databases) {
-      const response = await databases.listDocuments(DB_ID, CANDIDATES_COLLECTION, [
-        Query.equal('email', email),
-        Query.limit(1)
-      ]);
-      return response.documents[0] || null;
-    } else {
-      const candidates = Array.from(memoryStorage.candidates.values());
-      return candidates.find((c: any) => c.email === email) || null;
+    try {
+      if (databases) {
+        const response = await databases.listDocuments(DB_ID, CANDIDATES_COLLECTION, [
+          Query.equal('email', email),
+          Query.limit(1)
+        ]);
+        return response.documents[0] || null;
+      } else {
+        const candidates = Array.from(memoryStorage.candidates.values());
+        return candidates.find((c: any) => c.email === email) || null;
+      }
+    } catch (err) {
+      console.error('Error getting candidate by email:', err);
+      return null;
     }
   },
 
   async listCandidates(jobId?: string, status?: string, limit = 100) {
-    if (databases) {
-      const queries = [Query.limit(limit), Query.orderDesc('application_date')];
-      if (jobId) queries.push(Query.equal('job_id', jobId));
-      if (status) queries.push(Query.equal('status', status));
-      
-      const response = await databases.listDocuments(DB_ID, CANDIDATES_COLLECTION, queries);
-      return response.documents;
-    } else {
-      let candidates = Array.from(memoryStorage.candidates.values());
-      if (jobId) candidates = candidates.filter((c: any) => c.job_id === jobId);
-      if (status) candidates = candidates.filter((c: any) => c.status === status);
-      return candidates.sort((a: any, b: any) => 
-        new Date(b.application_date).getTime() - new Date(a.application_date).getTime()
-      ).slice(0, limit);
+    try {
+      if (databases) {
+        const queries = [Query.limit(limit), Query.orderDesc('application_date')];
+        if (jobId) queries.push(Query.equal('job_id', jobId));
+        if (status) queries.push(Query.equal('status', status));
+        
+        const response = await databases.listDocuments(DB_ID, CANDIDATES_COLLECTION, queries);
+        return response.documents;
+      } else {
+        let candidates = Array.from(memoryStorage.candidates.values());
+        if (jobId) candidates = candidates.filter((c: any) => c.job_id === jobId);
+        if (status) candidates = candidates.filter((c: any) => c.status === status);
+        return candidates.sort((a: any, b: any) => 
+          new Date(b.application_date).getTime() - new Date(a.application_date).getTime()
+        ).slice(0, limit);
+      }
+    } catch (err) {
+      console.error('Error listing candidates:', err);
+      // Return empty array instead of throwing
+      return [];
     }
   },
 
   // Jobs
   async createJob(job: Omit<JobRequirement, '$id'>) {
-    if (databases) {
-      return await databases.createDocument(
-        DB_ID,
-        JOBS_COLLECTION,
-        ID.unique(),
-        job
-      );
-    } else {
-      const id = `job_${Date.now()}`;
-      const doc = { $id: id, ...job };
-      memoryStorage.jobs.set(id, doc);
-      return doc;
+    try {
+      if (databases) {
+        return await databases.createDocument(
+          DB_ID,
+          JOBS_COLLECTION,
+          ID.unique(),
+          job
+        );
+      } else {
+        const id = `job_${Date.now()}`;
+        const doc = { $id: id, ...job };
+        memoryStorage.jobs.set(id, doc);
+        return doc;
+      }
+    } catch (err) {
+      console.error('Error creating job:', err);
+      throw err;
     }
   },
 
   async updateJob(jobId: string, updates: Partial<JobRequirement>) {
-    if (databases) {
-      return await databases.updateDocument(
-        DB_ID,
-        JOBS_COLLECTION,
-        jobId,
-        updates
-      );
-    } else {
-      const existing = memoryStorage.jobs.get(jobId);
-      if (existing) {
-        const updated = { ...existing, ...updates };
-        memoryStorage.jobs.set(jobId, updated);
-        return updated;
+    try {
+      if (databases) {
+        return await databases.updateDocument(
+          DB_ID,
+          JOBS_COLLECTION,
+          jobId,
+          updates
+        );
+      } else {
+        const existing = memoryStorage.jobs.get(jobId);
+        if (existing) {
+          const updated = { ...existing, ...updates };
+          memoryStorage.jobs.set(jobId, updated);
+          return updated;
+        }
+        throw new Error('Job not found');
       }
-      throw new Error('Job not found');
+    } catch (err) {
+      console.error('Error updating job:', err);
+      throw err;
     }
   },
 
   async getActiveJob() {
-    if (databases) {
-      const response = await databases.listDocuments(DB_ID, JOBS_COLLECTION, [
-        Query.equal('is_active', true),
-        Query.limit(1)
-      ]);
-      return response.documents[0] || null;
-    } else {
-      const jobs = Array.from(memoryStorage.jobs.values());
-      return jobs.find((j: any) => j.is_active) || null;
+    try {
+      if (databases) {
+        const response = await databases.listDocuments(DB_ID, JOBS_COLLECTION, [
+          Query.equal('is_active', true),
+          Query.limit(1)
+        ]);
+        return response.documents[0] || null;
+      } else {
+        const jobs = Array.from(memoryStorage.jobs.values());
+        return jobs.find((j: any) => j.is_active) || null;
+      }
+    } catch (err) {
+      console.error('Error getting active job:', err);
+      return null;
     }
   },
 
   async getJob(jobId: string) {
-    if (databases) {
-      return await databases.getDocument(DB_ID, JOBS_COLLECTION, jobId);
-    } else {
-      const job = memoryStorage.jobs.get(jobId);
-      if (!job) throw new Error('Job not found');
-      return job;
+    try {
+      if (databases) {
+        return await databases.getDocument(DB_ID, JOBS_COLLECTION, jobId);
+      } else {
+        const job = memoryStorage.jobs.get(jobId);
+        if (!job) throw new Error('Job not found');
+        return job;
+      }
+    } catch (err) {
+      console.error('Error getting job:', err);
+      throw err;
     }
   },
 
   async listJobs() {
-    if (databases) {
-      const response = await databases.listDocuments(DB_ID, JOBS_COLLECTION, [
-        Query.orderDesc('created_date')
-      ]);
-      return response.documents;
-    } else {
-      return Array.from(memoryStorage.jobs.values()).sort((a: any, b: any) => 
-        new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
-      );
+    try {
+      if (databases) {
+        const response = await databases.listDocuments(DB_ID, JOBS_COLLECTION, [
+          Query.orderDesc('created_date')
+        ]);
+        return response.documents;
+      } else {
+        return Array.from(memoryStorage.jobs.values()).sort((a: any, b: any) => 
+          new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+        );
+      }
+    } catch (err) {
+      console.error('Error listing jobs:', err);
+      return [];
     }
   },
 
   // Chat
   async saveChatMessage(message: ChatMessage) {
-    if (databases) {
-      return await databases.createDocument(
-        DB_ID,
-        CHATS_COLLECTION,
-        ID.unique(),
-        message
-      );
-    } else {
-      memoryStorage.chats.push(message);
-      return message;
+    try {
+      if (databases) {
+        return await databases.createDocument(
+          DB_ID,
+          CHATS_COLLECTION,
+          ID.unique(),
+          message
+        );
+      } else {
+        memoryStorage.chats.push(message);
+        return message;
+      }
+    } catch (err) {
+      console.error('Error saving chat message:', err);
+      throw err;
     }
   },
 
   async getChatHistory(limit = 50) {
-    if (databases) {
-      const response = await databases.listDocuments(DB_ID, CHATS_COLLECTION, [
-        Query.orderDesc('timestamp'),
-        Query.limit(limit)
-      ]);
-      return response.documents.reverse();
-    } else {
-      return memoryStorage.chats.slice(-limit);
+    try {
+      if (databases) {
+        const response = await databases.listDocuments(DB_ID, CHATS_COLLECTION, [
+          Query.orderDesc('timestamp'),
+          Query.limit(limit)
+        ]);
+        return response.documents.reverse();
+      } else {
+        return memoryStorage.chats.slice(-limit);
+      }
+    } catch (err) {
+      console.error('Error getting chat history:', err);
+      return [];
     }
   }
 };
