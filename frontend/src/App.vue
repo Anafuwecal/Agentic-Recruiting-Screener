@@ -4,7 +4,17 @@
       <div class="header-content">
         <div class="brand">
           <div class="logo">
-            <img src="/frontend/public/icon-r.png" alt="Recruitment AI Logo" width="40" height="40">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <defs>
+                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#A89080;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#8B7355;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+              <rect width="40" height="40" rx="8" fill="url(#logoGrad)"/>
+              <circle cx="20" cy="20" r="12" fill="none" stroke="white" stroke-width="2"/>
+              <path d="M14 20L18 24L26 16" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
           <div>
             <h1>Recruitment AI</h1>
@@ -119,7 +129,6 @@ body {
   flex-direction: column;
 }
 
-/* Header */
 .app-header {
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   color: var(--color-text-white);
@@ -200,7 +209,6 @@ nav {
   border-radius: 2px;
 }
 
-/* Main Content */
 .app-main {
   flex: 1;
   padding: 2rem;
@@ -209,7 +217,6 @@ nav {
   margin: 0 auto;
 }
 
-/* Footer */
 .app-footer {
   background: var(--color-bg-tertiary);
   border-top: 1px solid var(--color-border);
@@ -219,7 +226,6 @@ nav {
   font-size: 0.875rem;
 }
 
-/* Transitions */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -230,7 +236,6 @@ nav {
   opacity: 0;
 }
 
-/* Responsive Design */
 @media (max-width: 1024px) {
   .header-content {
     padding: 1rem 1.5rem;
@@ -318,7 +323,6 @@ nav {
   }
 }
 
-/* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
