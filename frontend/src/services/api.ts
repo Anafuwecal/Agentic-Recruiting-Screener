@@ -1,15 +1,14 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 
-                (import.meta.env.PROD 
-                  ? 'https://agentic-recruiting-screener.onrender.com' 
-                  : 'http://localhost:3141');
+// Always use Render backend URL
+const baseURL = import.meta.env.VITE_API_URL || 'https://agentic-recruiting-screener.onrender.com';
 
 const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: false, // Set to true if using cookies
 });
 
 export interface Candidate {
@@ -19,6 +18,7 @@ export interface Candidate {
   phone?: string;
   github_url?: string;
   portfolio_url?: string;
+  linkedin_url?: string;
   skills: string[];
   experience_years: number;
   intake_score: number;
@@ -54,7 +54,6 @@ export interface ChatMessage {
 }
 
 export const apiService = {
-  // Chat
   async sendMessage(message: string) {
     const res = await api.post('/api/chat', { message });
     return res.data.response;
@@ -65,7 +64,6 @@ export const apiService = {
     return res.data.history as ChatMessage[];
   },
 
-  // Candidates
   async getCandidates(status?: string) {
     const res = await api.get('/api/candidates', { params: { status } });
     return res.data.candidates as Candidate[];
@@ -76,7 +74,6 @@ export const apiService = {
     return res.data.candidate as Candidate;
   },
 
-  // Jobs
   async getJobs() {
     const res = await api.get('/api/jobs');
     return res.data.jobs as Job[];
@@ -97,7 +94,6 @@ export const apiService = {
     return res.data.job as Job;
   },
 
-  // Stats
   async getStats() {
     const res = await api.get('/api/stats');
     return res.data.stats;
