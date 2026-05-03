@@ -5,9 +5,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Import Groq provider
 import { createGroq } from '@ai-sdk/groq';
-
 import { createIntakeAgent } from './agents/intakeAgent';
 import { createResearcherAgent } from './agents/researcherAgent';
 import { createScreenerAgent } from './agents/screenerAgent';
@@ -18,12 +16,10 @@ import { handleEmployerMessage } from './chatHandler';
 import { db } from './services/database';
 import { JOB_REQUIREMENTS, updateJobRequirements } from './rubric';
 
-// Initialize Groq LLM
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
-// Create agents
 const agents = {
   intake: createIntakeAgent(groq),
   researcher: createResearcherAgent(groq),
@@ -34,25 +30,31 @@ const agents = {
 
 const app = new Hono();
 
-// Enable CORS for frontend
+// CORS Configuration - Allow Vercel URLs
 app.use('/*', cors({
   origin: [
     'http://localhost:5173',
     'http://localhost:3141',
     'https://agentic-recruiting-screener.vercel.app',
-    'https://*.vercel.app'
+    'https://agentic-recruiting-screener-git-main-anafuwecals-projects.vercel.app',
+    'https://agentic-recruiting-screener-anafuwecals-projects.vercel.app',
+    /^https:\/\/agentic-recruiting-screener.*\.vercel\.app$/,  // All Vercel preview URLs
   ],
   credentials: true,
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600,
 }));
 
 // Health check
-app.get('/', (c) => c.json({ 
+app.get('/api/health', (c) => c.json({ 
   status: 'online', 
   service: 'AI Recruitment Screener',
   version: '1.0.0'
 }));
 
-// Webhook endpoint for email applications
+// Webhook endpoint
 app.post('/webhook/email', async (c) => {
   try {
     const body = await c.req.json();
@@ -64,14 +66,12 @@ app.post('/webhook/email', async (c) => {
 
     const fullEmailText = `From: ${fromEmail}\nSubject: ${subject}\n---\n${textBody}`;
 
-    // Get active job
     const activeJob = await db.getActiveJob();
     if (!activeJob) {
       console.error('No active job found');
       return c.json({ error: 'No active job posting' }, 400);
     }
 
-    // Update job requirements
     updateJobRequirements({
       title: activeJob.title,
       required_skills: activeJob.required_skills,
@@ -80,7 +80,6 @@ app.post('/webhook/email', async (c) => {
       portfolio_required: activeJob.portfolio_required,
     });
 
-    // Fire async pipeline (don't wait)
     runPipeline(fullEmailText, fromEmail, agents, activeJob.$id).catch((err) => {
       console.error('Pipeline error:', err);
     });
@@ -92,17 +91,14 @@ app.post('/webhook/email', async (c) => {
   }
 });
 
-// Chat endpoint
+// Chat endpoints
 app.post('/api/chat', async (c) => {
   try {
     const { message } = await c.req.json();
-    
     if (!message || typeof message !== 'string') {
       return c.json({ error: 'Invalid message' }, 400);
     }
-
     const response = await handleEmployerMessage(message);
-    
     return c.json({ response });
   } catch (err: any) {
     console.error('Chat error:', err);
@@ -110,7 +106,6 @@ app.post('/api/chat', async (c) => {
   }
 });
 
-// Get chat history
 app.get('/api/chat/history', async (c) => {
   try {
     const history = await db.getChatHistory();
@@ -121,7 +116,7 @@ app.get('/api/chat/history', async (c) => {
   }
 });
 
-// Get candidates
+// Candidate endpoints
 app.get('/api/candidates', async (c) => {
   try {
     const status = c.req.query('status');
@@ -133,7 +128,6 @@ app.get('/api/candidates', async (c) => {
   }
 });
 
-// Get candidate by ID
 app.get('/api/candidates/:id', async (c) => {
   try {
     const id = c.req.param('id');
@@ -145,7 +139,7 @@ app.get('/api/candidates/:id', async (c) => {
   }
 });
 
-// Get jobs
+// Job endpoints
 app.get('/api/jobs', async (c) => {
   try {
     const jobs = await db.listJobs();
@@ -156,7 +150,6 @@ app.get('/api/jobs', async (c) => {
   }
 });
 
-// Get active job
 app.get('/api/jobs/active', async (c) => {
   try {
     const job = await db.getActiveJob();
@@ -167,25 +160,20 @@ app.get('/api/jobs/active', async (c) => {
   }
 });
 
-// Create job
 app.post('/api/jobs', async (c) => {
   try {
     const jobData = await c.req.json();
-    
-    // Deactivate other jobs
     const existingJobs = await db.listJobs();
     for (const job of existingJobs) {
       if (job.is_active) {
         await db.updateJob(job.$id, { is_active: false });
       }
     }
-
     const job = await db.createJob({
       ...jobData,
       is_active: true,
       created_date: new Date().toISOString(),
     });
-
     return c.json({ job }, 201);
   } catch (err: any) {
     console.error('Job creation error:', err);
@@ -193,15 +181,11 @@ app.post('/api/jobs', async (c) => {
   }
 });
 
-// Update job
 app.put('/api/jobs/:id', async (c) => {
   try {
     const id = c.req.param('id');
     const updates = await c.req.json();
-    
     const job = await db.updateJob(id, updates);
-    
-    // Update in-memory requirements if this is active job
     const activeJob = await db.getActiveJob();
     if (activeJob && activeJob.$id === id) {
       updateJobRequirements({
@@ -212,7 +196,6 @@ app.put('/api/jobs/:id', async (c) => {
         portfolio_required: activeJob.portfolio_required,
       });
     }
-    
     return c.json({ job });
   } catch (err: any) {
     console.error('Job update error:', err);
@@ -220,12 +203,11 @@ app.put('/api/jobs/:id', async (c) => {
   }
 });
 
-// Slack interaction webhook (for approve/reject buttons)
+// Slack webhook
 app.post('/webhook/slack/interactive', async (c) => {
   try {
     const body = await c.req.parseBody();
     const payload = JSON.parse(body.payload as string);
-    
     const action = payload.actions[0];
     const candidateId = action.value;
     const actionId = action.action_id;
@@ -236,44 +218,32 @@ app.post('/webhook/slack/interactive', async (c) => {
         decision: 'PROCEED',
         current_stage: 'Approved via Slack',
       });
-      
-      return c.json({ 
-        text: `Candidate approved. Please schedule interview via chat or UI.` 
-      });
+      return c.json({ text: `Candidate approved.` });
     } 
     else if (actionId === 'reject_candidate') {
       const candidate = await db.getCandidate(candidateId);
-      
       await db.updateCandidate(candidateId, {
         status: 'REJECTED',
         decision: 'REJECT',
         rejection_reason: 'Rejected by employer via Slack',
         current_stage: 'Rejected via Slack',
       });
-
-      // Send rejection email
       const { mailCandidate } = await import('./services/mailer');
       await mailCandidate(
         candidate.email,
         `Application Update - ${JOB_REQUIREMENTS.title}`,
-        `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Application Status Update</h2>
-            <p>Dear ${candidate.name},</p>
-            <p>Thank you for your interest in the ${JOB_REQUIREMENTS.title} position.</p>
-            <p>After review, we have decided not to move forward at this time.</p>
-            <p>We wish you the best in your job search.</p>
-            <br>
-            <p>Best regards,<br>${process.env.COMPANY_NAME} Recruiting Team</p>
-          </div>
-        `
+        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Application Status Update</h2>
+          <p>Dear ${candidate.name},</p>
+          <p>Thank you for your interest in the ${JOB_REQUIREMENTS.title} position.</p>
+          <p>After review, we have decided not to move forward at this time.</p>
+          <p>We wish you the best in your job search.</p>
+          <br>
+          <p>Best regards,<br>${process.env.COMPANY_NAME} Recruiting Team</p>
+        </div>`
       );
-      
-      return c.json({ 
-        text: `Candidate rejected. Rejection email sent.` 
-      });
+      return c.json({ text: `Candidate rejected.` });
     }
-
     return c.json({ text: 'Action processed' });
   } catch (err: any) {
     console.error('Slack interaction error:', err);
@@ -281,11 +251,10 @@ app.post('/webhook/slack/interactive', async (c) => {
   }
 });
 
-// Statistics endpoint
+// Stats endpoint
 app.get('/api/stats', async (c) => {
   try {
     const candidates = await db.listCandidates();
-    
     const stats = {
       total: candidates.length,
       new: candidates.filter((c: any) => c.status === 'NEW').length,
@@ -295,7 +264,6 @@ app.get('/api/stats', async (c) => {
       human_review: candidates.filter((c: any) => c.status === 'HUMAN_REVIEW').length,
       interviewed: candidates.filter((c: any) => c.interview_scheduled).length,
     };
-    
     return c.json({ stats });
   } catch (err: any) {
     console.error('Stats error:', err);
@@ -303,20 +271,19 @@ app.get('/api/stats', async (c) => {
   }
 });
 
-// Start server
-const PORT = parseInt(process.env.PORT || '3141');
+const PORT = parseInt(process.env.PORT || '10000');
 
 console.log('\n' + '='.repeat(60));
-console.log('  AI RECRUITMENT SCREENER - Starting...');
+console.log('  AI RECRUITMENT SCREENER - BACKEND');
 console.log('='.repeat(60));
-console.log(`Server starting on http://localhost:${PORT}`);
-console.log(`Webhook endpoint: http://localhost:${PORT}/webhook/email`);
-console.log(`Chat endpoint: http://localhost:${PORT}/api/chat`);
+console.log(`Starting server on port ${PORT}`);
 console.log('='.repeat(60) + '\n');
 
 serve({
   fetch: app.fetch,
   port: PORT,
 }, (info) => {
-  console.log(`✓ Server is running on http://localhost:${info.port}\n`);
+  console.log(`\n✓ Server running on http://localhost:${info.port}`);
+  console.log(`✓ Webhook: http://localhost:${info.port}/webhook/email`);
+  console.log(`✓ API: http://localhost:${info.port}/api/*\n`);
 });
