@@ -13,6 +13,6 @@
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "convex/**/*"],
   "exclude": ["node_modules", "dist"]
 }

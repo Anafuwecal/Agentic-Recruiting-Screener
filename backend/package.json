@@ -4,11 +4,13 @@
   "description": "",
   "main": "index.js",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0 <26.0.0"
   },
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc --skipLibCheck || echo 'TypeScript compilation had warnings'",
+   "scripts": {
+    "dev": "npm run convex:dev & tsx watch src/index.ts",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "build": "npm run convex:deploy && tsc --skipLibCheck || echo 'TypeScript compilation had warnings'",
     "start": "node dist/index.js",
     "start:dev": "tsx src/index.ts"
   },
@@ -23,6 +25,7 @@
     "@voltagent/core": "^2.7.3",
     "@voltagent/server-hono": "^2.0.13",
     "axios": "^1.15.2",
+    "convex": "^1.37.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.4",
