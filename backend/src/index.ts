@@ -5,8 +5,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { groq } from '@ai-sdk/groq';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGroq } from '@ai-sdk/groq';
 import { createIntakeAgent } from './agents/intakeAgent';
 import { createResearcherAgent } from './agents/researcherAgent';
 import { createScreenerAgent } from './agents/screenerAgent';
@@ -17,15 +16,17 @@ import { handleEmployerMessage } from './chatHandler';
 import { db } from './services/database';
 import { JOB_REQUIREMENTS, updateJobRequirements } from './rubric';
 
-// Initialize Groq
-const groqProvider = groq(process.env.GROQ_API_KEY!);
+const groqProvider = createGroq({
+  apiKey: process.env.GROQ_API_KEY!,
+});
+
 
 const agents = {
-  intake: createIntakeAgent(groq),
-  researcher: createResearcherAgent(groq),
-  screener: createScreenerAgent(groq),
-  judge: createJudgeAgent(groq),
-  coordinator: createCoordinatorAgent(groq),
+  intake: createIntakeAgent(groqProvider),
+  researcher: createResearcherAgent(groqProvider),
+  screener: createScreenerAgent(groqProvider),
+  judge: createJudgeAgent(groqProvider),
+  coordinator: createCoordinatorAgent(groqProvider),
 };
 
 const app = new Hono();
