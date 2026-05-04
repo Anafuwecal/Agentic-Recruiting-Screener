@@ -1,5 +1,5 @@
 {
-  "name": "recruitment-screener-backend",
+  "name": "backend",
   "version": "1.0.0",
   "type": "commonjs",
   "engines": {
@@ -11,10 +11,11 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@ai-sdk/groq": "^0.1.0",
+    "@ai-sdk/groq": "^1.0.4",
     "@hono/node-server": "^1.12.0",
     "@slack/web-api": "^6.10.0",
     "@voltagent/core": "^2.0.0",
+    "ai": "^4.0.0",
     "axios": "^1.6.2",
     "convex": "^1.16.0",
     "date-fns": "^3.0.0",

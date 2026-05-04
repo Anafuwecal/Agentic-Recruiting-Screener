@@ -3,7 +3,7 @@ import { Agent } from '@voltagent/core';
 export const createIntakeAgent = (llm: any) =>
   new Agent({
     name: 'Intake Agent',
-    llm,
+    llm: llm,
     model: 'llama-3.3-70b-versatile',
     instructions: `
       You are an application parser for job applications. 

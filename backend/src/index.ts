@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { createGroq } from '@ai-sdk/groq';
+import { groq } from '@ai-sdk/groq';
+import { createOpenAI } from '@ai-sdk/openai';
 import { createIntakeAgent } from './agents/intakeAgent';
 import { createResearcherAgent } from './agents/researcherAgent';
 import { createScreenerAgent } from './agents/screenerAgent';
@@ -16,9 +17,8 @@ import { handleEmployerMessage } from './chatHandler';
 import { db } from './services/database';
 import { JOB_REQUIREMENTS, updateJobRequirements } from './rubric';
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY!,
-});
+// Initialize Groq
+const groqProvider = groq(process.env.GROQ_API_KEY!);
 
 const agents = {
   intake: createIntakeAgent(groq),
