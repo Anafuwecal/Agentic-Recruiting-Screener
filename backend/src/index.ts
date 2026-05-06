@@ -59,20 +59,56 @@ app.get('/api/health', (c) => c.json({
 app.post('/webhook/email', async (c) => {
   try {
     const body = await c.req.json();
-    const fromEmail = body?.from?.address || body?.from || 'unknown@unknown.com';
-    const subject = body?.subject || 'Job Application';
-    const textBody = body?.text || body?.html || '';
-
-    console.log(`\nWebhook received from: ${fromEmail}`);
+    
+    console.log('\n' + '='.repeat(60));
+    console.log('WEBHOOK RECEIVED');
+    console.log('='.repeat(60));
+    console.log('Body:', JSON.stringify(body, null, 2));
+    
+    // Handle different email formats
+    let fromEmail = 'unknown@unknown.com';
+    let subject = 'Job Application';
+    let textBody = '';
+    
+    // Format 1: { from: { address: "..." }, subject: "...", text: "..." }
+    if (body?.from?.address) {
+      fromEmail = body.from.address;
+    }
+    // Format 2: { from: "..." }
+    else if (body?.from && typeof body.from === 'string') {
+      fromEmail = body.from;
+    }
+    // Format 3: { sender: "..." }
+    else if (body?.sender) {
+      fromEmail = body.sender;
+    }
+    // Format 4: { email: "..." }
+    else if (body?.email) {
+      fromEmail = body.email;
+    }
+    
+    subject = body?.subject || body?.title || 'Job Application';
+    textBody = body?.text || body?.body || body?.html || body?.content || '';
+    
+    console.log(`From: ${fromEmail}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Body length: ${textBody.length} chars`);
+    console.log('='.repeat(60) + '\n');
 
     const fullEmailText = `From: ${fromEmail}\nSubject: ${subject}\n---\n${textBody}`;
 
+    // Get active job
     const activeJob = await db.getActiveJob();
     if (!activeJob) {
-      console.error('No active job found');
-      return c.json({ error: 'No active job posting' }, 400);
+      console.error('No active job found - cannot process application');
+      return c.json({ 
+        error: 'No active job posting. Please create a job first.' 
+      }, 400);
     }
 
+    console.log(`Active job found: ${activeJob.title}`);
+
+    // Update job requirements
     updateJobRequirements({
       title: activeJob.title,
       required_skills: activeJob.required_skills,
@@ -81,6 +117,8 @@ app.post('/webhook/email', async (c) => {
       portfolio_required: activeJob.portfolio_required,
     });
 
+    // Fire async pipeline (don't wait)
+    console.log(`Starting pipeline for ${fromEmail}...`);
     runPipeline(fullEmailText, fromEmail, agents, activeJob.$id).catch((err) => {
       console.error('Pipeline error:', err);
     });
