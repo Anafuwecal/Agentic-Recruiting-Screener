@@ -1,5 +1,5 @@
-import { Agent } from "@voltagent/core";
-import { groqModel } from "../config/models";
+import { VoltAgent, Agent } from "@voltagent/core";
+import { groq } from "@ai-sdk/groq"; // Import the Groq provider
 import { screeningWorkflow } from "../workflows/screeningWorkflow";
 import { EmailService } from "../services/emailService";
 
@@ -7,7 +7,7 @@ const emailService = new EmailService();
 
 export const orchestratorAgent = new Agent({
   name: "OrchestratorSupervisor",
-  model: groqModel,
+  model: groq("llama-3.1-70b-versatile"),
   instructions: `You are the ORCHESTRATOR - the supervisor of all recruitment agents.
 
 YOUR RESPONSIBILITIES:

@@ -1,9 +1,9 @@
-import { Agent } from "@voltagent/core";
-import { groqModel } from "../config/models";
+import { VoltAgent, Agent } from "@voltagent/core";
+import { groq } from "@ai-sdk/groq"; // Import the Groq provider
 
 export const screenerAgent = new Agent({
   name: "ScreenerAgent",
-  model: groqModel,
+  model: groq("llama-3.1-70b-versatile"),
   instructions: `You are a senior technical interviewer.
 
 YOUR MISSION: Assess technical depth and generate targeted interview questions, 

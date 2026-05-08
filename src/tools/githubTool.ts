@@ -1,12 +1,24 @@
 import { z } from "zod";
 import axios from "axios";
 
+const githubSchema = z.object({
+  github_url: z.string().url(),
+});
+
 export const githubAnalysisTool = {
   name: "analyze_github",
   description: "Analyzes a GitHub profile and returns detailed information",
-  parameters: z.object({
-    github_url: z.string().url(),
-  }),
+  parameters: {
+    type: "object",
+    properties: {
+      github_url: {
+        type: "string",
+        format: "uri",
+        description: "GitHub profile URL",
+      },
+    },
+    required: ["github_url"],
+  },
   execute: async ({ github_url }: { github_url: string }) => {
     try {
       const username = github_url.split("github.com/")[1]?.split("/")[0];

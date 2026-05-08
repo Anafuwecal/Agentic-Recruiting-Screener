@@ -1,9 +1,9 @@
-import { Agent } from "@voltagent/core";
-import { groqModel } from "../config/models";
+import { VoltAgent, Agent } from "@voltagent/core";
+import { groq } from "@ai-sdk/groq"; // Import the Groq provider
 
 export const judgeAgent = new Agent({
   name: "JudgeAgent",
-  model: groqModel,
+  model: groq("llama-3.1-70b-versatile"),
   instructions: `You are the final decision authority.
 
 DECISION RULES:

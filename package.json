@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@ai-sdk/groq": "^3.0.39",
     "@voltagent/core": "^2.7.4",
     "@voltagent/server-hono": "^2.0.13",
     "axios": "^1.16.0",

@@ -5,9 +5,17 @@ import * as cheerio from "cheerio";
 export const portfolioAnalysisTool = {
   name: "analyze_portfolio",
   description: "Analyzes a portfolio website and extracts technologies",
-  parameters: z.object({
-    portfolio_url: z.string().url(),
-  }),
+  parameters: {
+    type: "object",
+    properties: {
+      portfolio_url: {
+        type: "string",
+        format: "uri",
+        description: "Portfolio website URL",
+      },
+    },
+    required: ["portfolio_url"],
+  },
   execute: async ({ portfolio_url }: { portfolio_url: string }) => {
     try {
       const response = await axios.get(portfolio_url, {

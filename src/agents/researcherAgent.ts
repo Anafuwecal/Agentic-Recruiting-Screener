@@ -1,11 +1,11 @@
-import { Agent } from "@voltagent/core";
-import { groqModel } from "../config/models";
+import { VoltAgent, Agent } from "@voltagent/core";
+import { groq } from "@ai-sdk/groq"; // Import the Groq provider
 import { githubAnalysisTool } from "../tools/githubTool";
 import { portfolioAnalysisTool } from "../tools/portfolioTool";
 
 export const researcherAgent = new Agent({
   name: "ResearcherAgent",
-  model: groqModel,
+  model: groq("llama-3.1-70b-versatile"),
   instructions: `You are a technical verification specialist.
 
 YOUR MISSION: Verify candidate claims by ACTUALLY analyzing their GitHub and portfolio.

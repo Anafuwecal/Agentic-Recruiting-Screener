@@ -1,3 +1,15 @@
+import dotenv from "dotenv";
+// Load .env FIRST, before anything else
+dotenv.config();
+
+// Also try loading .env.local (Convex creates this)
+import path from "path";
+import fs from "fs";
+const envLocalPath = path.join(__dirname, "../.env.local");
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+}
+
 import { VoltAgent } from "@voltagent/core";
 import { honoServer } from "@voltagent/server-hono";
 import { intakeAgent } from "./agents/intakeAgent";
@@ -12,7 +24,6 @@ import multer from "multer";
 import { parseFile } from "./utils/fileParser";
 import dotenv from "dotenv";
 
-dotenv.config();
 
 // Initialize VoltAgent
 new VoltAgent({

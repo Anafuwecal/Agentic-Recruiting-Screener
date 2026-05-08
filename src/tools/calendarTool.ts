@@ -15,10 +15,21 @@ const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 export const scheduleInterviewTool = {
   name: "schedule_interview",
   description: "Schedules a Google Meet interview",
-  parameters: z.object({
-    candidate_name: z.string(),
-    candidate_email: z.string().email(),
-  }),
+  parameters: {
+    type: "object",
+    properties: {
+      candidate_name: {
+        type: "string",
+        description: "Full name of the candidate",
+      },
+      candidate_email: {
+        type: "string",
+        format: "email",
+        description: "Email address of the candidate",
+      },
+    },
+    required: ["candidate_name", "candidate_email"],
+  },
   execute: async ({
     candidate_name,
     candidate_email,

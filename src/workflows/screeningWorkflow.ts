@@ -1,3 +1,15 @@
+import dotenv from "dotenv";
+// Load .env FIRST, before anything else
+dotenv.config();
+
+// Also try loading .env.local (Convex creates this)
+import path from "path";
+import fs from "fs";
+const envLocalPath = path.join(__dirname, "../.env.local");
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+}
+
 import { createWorkflowChain } from "@voltagent/core";
 import { z } from "zod";
 import { intakeAgent } from "../agents/intakeAgent";
