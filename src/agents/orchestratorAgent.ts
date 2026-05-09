@@ -23,38 +23,52 @@ You coordinate the entire pipeline but delegate execution to specialized agents.
   tools: [],
 });
 
-export async function processApplication(
-  emailContent: string,
-  attachmentText?: string
-) {
-  console.log("🎯 ORCHESTRATOR: New application received");
+export async function processApplication(emailContent: string, attachmentText?: string) {
+  console.log(" ORCHESTRATOR: New application received");
 
   try {
-    // Execute the workflow
-    const result = await screeningWorkflow.execute({
+    const execution = await screeningWorkflow.run({
       email_content: emailContent,
       attachment_text: attachmentText,
     });
 
-    console.log("📊 Final Result:", result);
+    // 1. Log the full execution object to see what's actually happening
+    console.log("DEBUG: Execution Status:", execution.status);
 
-    // ORCHESTRATOR handles all email communication
+    // 2. Handle different statuses
+    if (execution.status === "suspended") {
+      console.log("ORCHESTRATOR: Workflow suspended for human review.");
+      // You might want to send your "Human Review" email here
+      // Note: Data is usually in execution.data when suspended
+      return await emailService.sendHumanReviewRequest(execution.data);
+    }
+
+    if (execution.status === "error") {
+      console.error("Workflow failed with error:", execution.error);
+      throw new Error(`Workflow Error: ${execution.error}`);
+    }
+
+    // 3. Only access .result if the status is "completed"
+    const result = execution.result;
+
+    if (!result) {
+      throw new Error("Workflow completed but returned no result.");
+    }
+
+    console.log(" Final Result:", result);
+
+    // Your existing decision logic
     if (result.decision === "REJECT") {
-      await emailService.sendRejectionEmail(
-        result.candidate_email,
-        result.summary
-      );
+      await emailService.sendRejectionEmail(result.candidate_email, result.summary);
       await emailService.notifyEmployerRejection(result);
-    } else if (result.decision === "HUMAN_REVIEW") {
-      await emailService.sendHumanReviewRequest(result);
     } else if (result.decision === "PROCEED") {
       await emailService.sendInterviewInvitation(result);
       await emailService.notifyEmployerInterview(result);
     }
 
-    console.log("✅ ORCHESTRATOR: Process complete");
+    console.log(" ORCHESTRATOR: Process complete");
   } catch (error: any) {
-    console.error("❌ ORCHESTRATOR ERROR:", error.message);
+    console.error("ORCHESTRATOR ERROR:", error.message);
     throw error;
   }
 }
