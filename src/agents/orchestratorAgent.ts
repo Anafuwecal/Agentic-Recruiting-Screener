@@ -44,8 +44,8 @@ export async function processApplication(emailContent: string, attachmentText?: 
     }
 
     if (execution.status === "error") {
-      console.error("Workflow failed with error:", execution.error);
-      throw new Error(`Workflow Error: ${execution.error}`);
+      console.error("❌ WORKFLOW ERROR:", execution.error);
+      return; 
     }
 
     // 3. Only access .result if the status is "completed"
@@ -67,7 +67,7 @@ export async function processApplication(emailContent: string, attachmentText?: 
     }
 
     console.log(" ORCHESTRATOR: Process complete");
-  } catch (error: any) {
+  } catch (error) {
     console.error("ORCHESTRATOR ERROR:", error.message);
     throw error;
   }

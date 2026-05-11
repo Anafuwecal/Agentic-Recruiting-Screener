@@ -22,6 +22,18 @@ import { api } from "../../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 
+// Helper function
+const safeParse = (text: string) => {
+  try {
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error("🚨 Failed to parse AI JSON. Raw output was:", text);
+    // Return a fallback object so the workflow doesn't crash
+    return { error: "parse_failed", raw: text };
+  }
+};
+
 export const screeningWorkflow = createWorkflowChain({
   id: "recruitment-screening",
   input: z.object({
@@ -49,7 +61,7 @@ export const screeningWorkflow = createWorkflowChain({
         input: `Parse this application:\n\n${fullContent}`,
       });
 
-      const parsed = JSON.parse(result);
+      const parsed = JSON.parse(safeParse(result));
 
       // Create applicant in Convex
       const applicantId = await convex.mutation(api.applicants.create, {
@@ -74,7 +86,7 @@ export const screeningWorkflow = createWorkflowChain({
       return {
         applicantId,
         intakeResult: parsed,
-        candidateEmail: parsed.extracted_data?.email,
+        candidateEmail: parsed.extracted_data?.email || "unknown@candidate.com", 
       };
     },
   })
@@ -137,7 +149,7 @@ Use your tools to analyze GitHub and portfolio.
         input: researchInput,
       });
 
-      const parsed = JSON.parse(researchResult);
+      const parsed = JSON.parse(safeParse(researchResult));
 
       await convex.mutation(api.applicants.updateAgentData, {
         id: data.applicantId,
@@ -198,7 +210,7 @@ Generate interview questions and assess fit.
         input: screeningInput,
       });
 
-      const parsed = JSON.parse(screeningResult);
+      const parsed = JSON.parse(safeParse(screeningResult));
 
       await convex.mutation(api.applicants.updateAgentData, {
         id: data.applicantId,
@@ -226,10 +238,10 @@ Generate interview questions and assess fit.
       if (data.early_reject) {
         return {
           decision: "REJECT" as const,
-          candidate_email: data.candidateEmail,
+          candidate_email: data.candidateEmail || "unknown@candidate.com",
           total_score: 0,
-          summary: data.reason,
-          applicantId: data.applicantId,
+          summary: data.reason || "Application rejected during intake.",
+          applicantId: data.applicantId || "unknownApplicant" ,
         };
       }
 
@@ -257,7 +269,7 @@ Apply decision rules and provide reasoning.
         input: judgeInput,
       });
 
-      const parsed = JSON.parse(judgeResult);
+      const parsed = JSON.parse(safeParse(judgeResult));
 
       await convex.mutation(api.applicants.updateAgentData, {
         id: data.applicantId,
