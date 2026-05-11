@@ -29,8 +29,8 @@ const safeParse = (text: string) => {
     return JSON.parse(cleaned);
   } catch (e) {
     console.error("🚨 Failed to parse AI JSON. Raw output was:", text);
-    // Return a fallback object so the workflow doesn't crash
-    return { error: "parse_failed", raw: text };
+    // Return a structured fallback so stages don't break
+    return { error: "parse_failed", extracted_data: { name: "Unknown" } };
   }
 };
 
@@ -61,7 +61,7 @@ export const screeningWorkflow = createWorkflowChain({
         input: `Parse this application:\n\n${fullContent}`,
       });
 
-      const parsed = JSON.parse(safeParse(result));
+      const parsed = safeParse(result);
 
       // Create applicant in Convex
       const applicantId = await convex.mutation(api.applicants.create, {
@@ -149,7 +149,7 @@ Use your tools to analyze GitHub and portfolio.
         input: researchInput,
       });
 
-      const parsed = JSON.parse(safeParse(researchResult));
+      const parsed = safeParse(researchResult);
 
       await convex.mutation(api.applicants.updateAgentData, {
         id: data.applicantId,
@@ -210,7 +210,7 @@ Generate interview questions and assess fit.
         input: screeningInput,
       });
 
-      const parsed = JSON.parse(safeParse(screeningResult));
+      const parsed = safeParse(screeningResult);
 
       await convex.mutation(api.applicants.updateAgentData, {
         id: data.applicantId,
@@ -269,7 +269,7 @@ Apply decision rules and provide reasoning.
         input: judgeInput,
       });
 
-      const parsed = JSON.parse(safeParse(judgeResult));
+      const parsed = safeParse(judgeResult);
 
       await convex.mutation(api.applicants.updateAgentData, {
         id: data.applicantId,
@@ -312,7 +312,7 @@ Use the schedule_interview tool.
         input: coordinatorInput,
       });
 
-      const parsed = JSON.parse(coordinatorResult);
+      const parsed = safeParse(coordinatorResult);
 
       if (parsed.meeting_link) {
         await convex.mutation(api.applicants.addInterview, {
@@ -328,4 +328,6 @@ Use the schedule_interview tool.
         meetingDetails: parsed,
       };
     },
-  });
+  })
+
+.toWorkflow();
