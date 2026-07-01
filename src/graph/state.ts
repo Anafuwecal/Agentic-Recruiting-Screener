@@ -9,6 +9,7 @@ export interface CandidateData {
   cvText: string;
   githubUrl?: string | undefined;
   portfolioUrl?: string | undefined;
+  primaryTechStack?: string[];
 }
 
 export interface VerificationData {
@@ -32,11 +33,17 @@ export interface AssessmentData {
   passedAssessment?: boolean;
 }
 
-export interface LogisticsData {
-  googleMeetLink?: string;
-  scheduledInterviewDate?: string;
+export interface EvaluationData {
+  isPass: boolean;
+  score: number;
+  feedback: string;
+  matrix: string[];
 }
 
+export interface LogisticsData {
+  interviewDate?: string;
+  meetLink?: string;
+}
 // Defining the LangGraph channels structure
 export const CandidateScreeningState = Annotation.Root({
   candidateInfo: Annotation<CandidateData>(),
@@ -46,9 +53,11 @@ export const CandidateScreeningState = Annotation.Root({
     default: () => [],
   }),
   assessment: Annotation<AssessmentData>(),
+  evaluation: Annotation<EvaluationData>(),
   logistics: Annotation<LogisticsData>(),
+  finalReport: Annotation<string>(),
   pipelineStatus: Annotation<string>(),
 });
 
-// Create a structural type export for compiling nodes
+// 3. Create a structural type export for compiling nodes
 export type GraphStateType = typeof CandidateScreeningState.State;

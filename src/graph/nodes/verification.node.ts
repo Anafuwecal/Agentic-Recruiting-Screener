@@ -1,5 +1,5 @@
-import { GraphStateType, FluffItem } from "../state.js";
-import { aiModelClient } from "../../utils/llm.js";
+import { GraphStateType, FluffItem } from "../state.ts";
+import { aiModelClient } from "../../utils/llm.ts";
 import { z } from "zod";
 
 // Structured representation of candidate background consistency metrics

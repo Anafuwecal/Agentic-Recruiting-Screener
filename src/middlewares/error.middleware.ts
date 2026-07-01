@@ -12,15 +12,8 @@ export const globalErrorHandler = (
   next: NextFunction
 ): void => {
   // 1. Log structural error details securely internally
-  console.error(`[ERROR TIME: ${new Date().toISOString()}] Details:`, {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-  });
-
-  // 2. Handle Zod Input Validation Failures
   if (err instanceof ZodError) {
+    console.warn(`Blocked malformed payload on ${req.method} ${req.path}`);
     res.status(400).json({
       success: false,
       errorType: "VALIDATION_ERROR",
@@ -32,6 +25,14 @@ export const globalErrorHandler = (
     });
     return;
   }
+
+  // 2. Handle Zod Input Validation Failures
+  console.error(`❌ [SERVER FAULT - ${new Date().toISOString()}] Details:`, {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+  });
 
   // 3. Handle explicit operational errors
   const status = err.statusCode || 500;

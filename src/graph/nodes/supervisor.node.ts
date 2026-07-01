@@ -1,5 +1,5 @@
-import { GraphStateType } from "../state.js";
-import { aiModelClient } from "../../utils/llm.js";
+import { GraphStateType } from "../state.ts";
+import { aiModelClient } from "../../utils/llm.ts";
 
 // Mock Outbound Email Dispatch Utility
 async function sendRecruiterAlertEmail(candidateName: string, roleSubject: string): Promise<void> {

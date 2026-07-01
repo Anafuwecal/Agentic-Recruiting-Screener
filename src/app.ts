@@ -4,9 +4,12 @@ import { IncomingApplicationSchema } from "./schemas/webhook.schema.ts";
 import { JwtService } from "./services/jwt.service.ts";
 import { LangGraphService } from "./services/langgraph.service.ts";
 import { globalErrorHandler } from "./middlewares/error.middleware.ts";
+import { requireCandidateAuth, AuthenticatedRequest } from "./middlewares/auth.middleware.ts";
+import morgan from "morgan";
 
 const app = express();
 app.use(express.json());
+app.use(morgan("dev"));
 
 const jwtService = new JwtService();
 const langGraphService = new LangGraphService();
@@ -62,6 +65,33 @@ app.post(
   }
 );
 
+app.post(
+  "/submissions/submit-assessment",
+  requireCandidateAuth, // Secures route via JWT
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { codeSubmission } = req.body;
+      const threadId = req.candidate?.threadId;
+
+      if (!codeSubmission || !threadId) {
+        res.status(400).json({ success: false, message: "Missing code submission data." });
+        return;
+      }
+
+      // Fire-and-forget background resumption
+      langGraphService.resumeWorkflowExecution(threadId, codeSubmission).catch((error) => {
+        console.error(" Fatal Resumption Error:", error);
+      });
+
+      res.status(202).json({
+        success: true,
+        message: "Code assessment received successfully. The evaluation agents are reviewing your submission.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // Register Global Error Handling Boundary Middleware Last
 app.use(globalErrorHandler);

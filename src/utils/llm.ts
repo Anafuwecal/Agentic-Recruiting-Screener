@@ -3,17 +3,20 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Ensure an API key is available before boot
-const apiKey = process.env.GROK_API_KEY || process.env.OPENAI_API_KEY;
+
+const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+const baseURL = process.env.LLM_BASE_URL || "https://api.groq.com/openai/v1";
+const modelName = process.env.LLM_MODEL_NAME || "openai/gpt-oss-120b";
+
 if (!apiKey) {
-  console.warn(" Warning: Missing GROK_API_KEY / OPENAI_API_KEY. Ensure your .env configuration is set.");
+  console.warn(" Warning: Missing API Key ");
 }
 
 export const aiModelClient = new ChatOpenAI({
-  openAIApiKey: apiKey,
+  apiKey: apiKey,
   configuration: {
-    baseURL: process.env.LLM_BASE_URL || "https://api.openai.com/v1",
+    baseURL: baseURL,
   },
-  modelName: process.env.LLM_MODEL_NAME || "gpt-4o-mini", // Easily swappable to grok-beta or llama-3
-  temperature: 0.1, // Set low temperature to enforce strict structural accuracy
+  modelName: modelName,
+  temperature: 0.1,
 });

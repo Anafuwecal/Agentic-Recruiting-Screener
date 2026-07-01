@@ -4,6 +4,10 @@ import { ConvexPersistenceService } from "./persistence.service.ts";
 import { supervisorNode } from "../graph/nodes/supervisor.node.ts";
 import { intakeNode } from "../graph/nodes/intake.node.ts";
 import { verificationNode } from "../graph/nodes/verification.node.ts";
+import { screenerNode } from "../graph/nodes/screener.node.ts";
+import { decisionNode } from "../graph/nodes/decision.node.ts";
+import { logisticsNode } from "../graph/nodes/logistics.node.ts";
+import { watcherNode } from "../graph/nodes/watcher.node.ts";
 
 export class LangGraphService {
   private graphEngine;
@@ -15,55 +19,90 @@ export class LangGraphService {
   }
 
   private initializeGraphStructure() {
-    const workflow = new StateGraph(CandidateScreeningState);
+    const workflow = new StateGraph(CandidateScreeningState)
+      .addNode("supervisor_node", supervisorNode)
+      .addNode("intake_node", intakeNode)
+      .addNode("verification_node", verificationNode)
+      .addNode("screener_node", screenerNode)
+      .addNode("decision_node", decisionNode)
+      .addNode("logistics_node", logisticsNode) 
+      .addNode("watcher_node", watcherNode)
 
-    //Define Stub Nodes for the pipeline sequence
-    workflow.addNode("supervisor_node", supervisorNode);
-    workflow.addNode("intake_node", intakeNode);
-    workflow.addNode("verification_node", verificationNode);
-
-    //Establish Execution Flows
-    workflow.addEdge(START, "supervisor_node");
-
-    // Implement Conditional Routing Edge based on Scorecard Validation
-    workflow.addConditionalEdges(
-      "supervisor_node",
-      (state: GraphStateType) => {
-        if (state.pipelineStatus === "SUPERVISOR_FAILED_SCORECARD") {
-          return "fail_path";
+      // 1. Entry Router: Fresh Run vs Resume Run
+      .addConditionalEdges(
+        START,
+        (state: GraphStateType) => state.pipelineStatus === "SUBMISSION_RECEIVED" ? "resume_path" : "initial_path",
+        {
+          initial_path: "supervisor_node", 
+          resume_path: "decision_node", // Route directly to Judge upon code submission!
         }
-        return "continue_path";
-      },
-      {
-        fail_path: END,               // Immediately halt execution on scorecard failure
-        continue_path: "intake_node", // Move forward to data parsing if criteria are met
-      }
-    );
+      )
 
-    workflow.addEdge("intake_node", "verification_node");
-    workflow.addEdge("verification_node", END);
+      // 2. Top Funnel
+      .addConditionalEdges("supervisor_node", (state) => state.pipelineStatus === "SUPERVISOR_FAILED_SCORECARD" ? "fail_path" : "continue_path", {
+        fail_path: END,
+        continue_path: "intake_node",
+      })
+      .addEdge("intake_node", "verification_node")
+      .addEdge("verification_node", "screener_node")
+      .addEdge("screener_node", END) 
+
+      // 3. Evaluation & Logistics Funnel (Triggered on Resume)
+      .addConditionalEdges(
+        "decision_node",
+        (state: GraphStateType) => state.pipelineStatus === "EVALUATION_PASSED" ? "pass_path" : "fail_path",
+        {
+          pass_path: "logistics_node", // Schedule interview
+          fail_path: "watcher_node",   // Skip scheduling, go straight to final report
+        }
+      )
+      
+      .addEdge("logistics_node", "watcher_node")
+      .addEdge("watcher_node", END);
 
     return workflow.compile();
   }
 
-  /**
-   * Asynchronously spins up the executing graph loop from background request processing pools
-   */
   public async executeWorkflowPipeline(threadId: string, candidatePayload: CandidateData): Promise<void> {
+    // ... [Keep your existing executeWorkflowPipeline code from Pod 3] ...
     console.log(` Starting background Multi-Agent Processing for Thread: ${threadId}`);
-
     const initialContextState: Partial<GraphStateType> = {
       candidateInfo: candidatePayload,
       fluffReport: [],
       pipelineStatus: "INITIALIZED",
     };
-
     await this.persistenceService.saveGraphState(threadId, initialContextState);
-
-    // Invoke execution across the active LLM Agent matrix nodes
     const outputStateSummary = await this.graphEngine.invoke(initialContextState);
-
     await this.persistenceService.saveGraphState(threadId, outputStateSummary);
-    console.log(` Engine Workflow Thread Finished. Current Status Flag: ${outputStateSummary.pipelineStatus}`);
+    console.log(` Engine Workflow Thread Paused cleanly. Current Status: ${outputStateSummary.pipelineStatus}`);
+  }
+
+  /**
+   * The Resumption Trigger: Wakes up the graph engine from Convex storage
+   */
+  public async resumeWorkflowExecution(threadId: string, submittedCode: string): Promise<void> {
+    console.log(`\n [RESUMPTION GATEWAY]: Waking up Graph Engine for Thread: ${threadId}`);
+
+    // 1. Pull the sleeping state from Convex
+    const sleepingState = await this.persistenceService.loadGraphState(threadId);
+    if (!sleepingState) throw new Error("Thread context not found in database.");
+
+    // 2. Inject the candidate's solution and flip the status switch
+    const resumedState: Partial<GraphStateType> = {
+      ...sleepingState,
+      assessment: {
+        ...sleepingState.assessment,
+        submittedCode: submittedCode,
+      },
+      pipelineStatus: "SUBMISSION_RECEIVED",
+    };
+
+    // 3. Save the updated state and invoke the graph. 
+    // The Entry Router will see "SUBMISSION_RECEIVED" and skip the top funnel!
+    await this.persistenceService.saveGraphState(threadId, resumedState);
+    const outputStateSummary = await this.graphEngine.invoke(resumedState);
+    
+    await this.persistenceService.saveGraphState(threadId, outputStateSummary);
+    console.log(` Engine Workflow Resumed and processed. Current Status: ${outputStateSummary.pipelineStatus}`);
   }
 }

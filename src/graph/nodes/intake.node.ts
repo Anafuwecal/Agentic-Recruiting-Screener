@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { GraphStateType } from "../state.js";
-import { aiModelClient } from "../../utils/llm.js";
+import { GraphStateType } from "../state.ts";
+import { aiModelClient } from "../../utils/llm.ts";
 
 // Exact extraction schema matching data normalization criteria
 const CoreExtractionSchema = z.object({
   extractedName: z.string().describe("The full legal name of the applicant"),
-  extractedEmail: z.string().email().describe("The primary verified email address of the applicant"),
+  extractedEmail: z.string().describe("The primary verified email address of the applicant"),
   coverLetterBrief: z.string().describe("A summarized snapshot of the core motivation derived from the cover letter text or email body"),
   primaryTechStack: z.array(z.string()).describe("List of engineering technologies, frameworks, and programming languages explicitly claimed"),
 });
