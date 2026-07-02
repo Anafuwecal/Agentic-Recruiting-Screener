@@ -8,6 +8,7 @@ import { screenerNode } from "../graph/nodes/screener.node.ts";
 import { decisionNode } from "../graph/nodes/decision.node.ts";
 import { logisticsNode } from "../graph/nodes/logistics.node.ts";
 import { watcherNode } from "../graph/nodes/watcher.node.ts";
+import { mailerNode } from "../graph/nodes/mailer.node.ts";
 
 export class LangGraphService {
   private graphEngine;
@@ -27,6 +28,7 @@ export class LangGraphService {
       .addNode("decision_node", decisionNode)
       .addNode("logistics_node", logisticsNode) 
       .addNode("watcher_node", watcherNode)
+      .addNode("mailer_node", mailerNode)
 
       // 1. Entry Router: Fresh Run vs Resume Run
       .addConditionalEdges(
@@ -58,7 +60,8 @@ export class LangGraphService {
       )
       
       .addEdge("logistics_node", "watcher_node")
-      .addEdge("watcher_node", END);
+      .addEdge("watcher_node", "mailer_node")
+      .addEdge("mailer_node", END);
 
     return workflow.compile();
   }

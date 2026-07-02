@@ -30,7 +30,8 @@ export default defineSchema({
       })
     ),
     updatedAt: v.number(),
-  }).index("by_threadId", ["threadId"]),
+  }).index("by_threadId", ["threadId"])        
+    .index("by_candidateId", ["candidateId"]),
 
   fluff_reports: defineTable({
     applicationId: v.string(),
