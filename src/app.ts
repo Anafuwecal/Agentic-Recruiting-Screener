@@ -5,6 +5,8 @@ import { JwtService } from "./services/jwt.service.ts";
 import { LangGraphService } from "./services/langgraph.service.ts";
 import { globalErrorHandler } from "./middlewares/error.middleware.ts";
 import { requireCandidateAuth, AuthenticatedRequest } from "./middlewares/auth.middleware.ts";
+import multer from "multer";
+import { ExtractionService } from "./services/extraction.service.ts";
 import morgan from "morgan";
 
 const app = express();
@@ -14,6 +16,8 @@ app.use(morgan("dev"));
 const jwtService = new JwtService();
 const langGraphService = new LangGraphService();
 
+// Setup Multer to store files temporarily in a /uploads folder
+const upload = multer({ dest: "uploads/" });
 
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "UP", engine: "ACTIVE" });
@@ -22,10 +26,33 @@ app.get("/health", (req: Request, res: Response) => {
 // Primary Webhook Entrypoint 
 app.post(
   "/webhooks/incoming-application",
+  upload.single("resume"),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       //Parse payload through Zod validation guard
-      const validatedPayload = IncomingApplicationSchema.parse(req.body);
+      const { name, email, jobId, githubUrl } = req.body;
+      const resumeFile = req.file;
+
+      if (!resumeFile) throw new Error("Resume file (PDF/DOCX) is required.");
+
+      // Parse the physical file
+      const cvText = await ExtractionService.extractTextFromFile(resumeFile.path, resumeFile.mimetype);
+
+      // (Optional) Scrape GitHub immediately if provided
+      let scrapedGithub = "";
+      if (githubUrl) {
+        scrapedGithub = await ExtractionService.scrapeUrl(githubUrl);
+      }
+
+      const candidatePayload = {
+        name,
+        email,
+        jobId, // Pass the Job ID, the Supervisor will fetch the requirements from Convex
+        subject: `Application for Job ID: ${jobId}`,
+        emailBody: "Application submitted via portal",
+        cvText: cvText + `\n\nGitHub Data: ${scrapedGithub}`,
+        githubUrl
+      };
 
       //Dynamically provision structural backend tracking identifiers
       const candidateId = `cand_${crypto.randomBytes(4).toString("hex")}`;
@@ -38,17 +65,8 @@ app.post(
       });
 
       //Fire-and-Forget Asynchronous Orchestration Loop Call
-      // Do NOT use "await" here. This lets the graph run in the background
-      // while we return an immediate response back to the client.
-      langGraphService.executeWorkflowPipeline(threadId, {
-        name: validatedPayload.senderName,
-        email: validatedPayload.senderEmail,
-        subject: validatedPayload.subject,
-        emailBody: validatedPayload.emailBody,
-        cvText: validatedPayload.cvText,
-        githubUrl: validatedPayload.githubUrl,
-        portfolioUrl: validatedPayload.portfolioUrl,
-      }).catch((asyncGraphError) => {
+      // FIXED: Pass the candidatePayload we just created, not the old validatedPayload
+      langGraphService.executeWorkflowPipeline(threadId, candidatePayload as any).catch((asyncGraphError) => {
         console.error(" Fatal Async State Machine Subsystem Execution Error:", asyncGraphError);
       });
 
@@ -68,24 +86,23 @@ app.post(
 app.post(
   "/submissions/submit-assessment",
   requireCandidateAuth, // Secures route via JWT
+  upload.single("codebase"),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { codeSubmission } = req.body;
+      const zipFile = req.file;
       const threadId = req.candidate?.threadId;
 
-      if (!codeSubmission || !threadId) {
-        res.status(400).json({ success: false, message: "Missing code submission data." });
-        return;
-      }
+      if (!zipFile) throw new Error("Assessment zip file is required.");
+      if (!threadId) throw new Error("Thread ID is missing from secure token.");
 
-      // Fire-and-forget background resumption
-      langGraphService.resumeWorkflowExecution(threadId, codeSubmission).catch((error) => {
-        console.error(" Fatal Resumption Error:", error);
-      });
+      // Extract all code from the Zip folder
+      const combinedCode = ExtractionService.extractCodeFromZip(zipFile.path);
+
+      langGraphService.resumeWorkflowExecution(threadId, combinedCode).catch(console.error);
 
       res.status(202).json({
         success: true,
-        message: "Code assessment received successfully. The evaluation agents are reviewing your submission.",
+        message: "Assessment received successfully. We are reviewing your submission.",
       });
     } catch (error) {
       next(error);

@@ -42,7 +42,7 @@ export interface EvaluationData {
 
 export interface LogisticsData {
   interviewDate?: string;
-  meetLink?: string;
+  meetLink?: string | undefined;
 }
 // Defining the LangGraph channels structure
 export const CandidateScreeningState = Annotation.Root({

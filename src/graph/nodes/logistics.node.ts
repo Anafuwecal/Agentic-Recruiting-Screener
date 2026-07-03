@@ -1,4 +1,5 @@
 import { GraphStateType } from "../state.ts";
+import { createMeetInterview } from "../../services/calendar.service.ts";
 
 // Utility to calculate 2 business days from now
 function getInterviewDate(): Date {
@@ -18,23 +19,23 @@ export async function logisticsNode(state: GraphStateType): Promise<Partial<Grap
 
   const interviewDate = getInterviewDate();
   
-  // In a real production environment, you would use:
-  // import { google } from 'googleapis';
-  // const calendar = google.calendar({version: 'v3', auth: oauth2Client});
-  // const event = await calendar.events.insert({...});
+  const logisticsResult = await createMeetInterview(
+    state.candidateInfo!.name, 
+    state.candidateInfo!.email
+  );
 
-  const mockGoogleCalendarResponse = {
-    scheduledTime: interviewDate.toISOString(),
-    meetLink: `https://meet.google.com/mock-${Math.random().toString(36).substring(7)}`,
-    eventId: `evt_${Date.now()}`
-  };
+//  const mockGoogleCalendarResponse = {
+//    scheduledTime: interviewDate.toISOString(),
+//    meetLink: `https://meet.google.com/mock-${Math.random().toString(36).substring(7)}`,
+//    eventId: `evt_${Date.now()}`
+// };
 
-  console.log(`[LOGISTICS AGENT]: Meeting scheduled for ${interviewDate.toDateString()} at ${mockGoogleCalendarResponse.meetLink}`);
+  console.log(`[LOGISTICS AGENT]: Meeting scheduled for ${interviewDate.toDateString()} at ${logisticsResult.meetLink}`);
 
   return {
     logistics: {
-      interviewDate: mockGoogleCalendarResponse.scheduledTime,
-      meetLink: mockGoogleCalendarResponse.meetLink,
+      interviewDate: logisticsResult.scheduledTime,
+      meetLink: logisticsResult.meetLink,
     },
     pipelineStatus: "LOGISTICS_COMPLETED",
   };

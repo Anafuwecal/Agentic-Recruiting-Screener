@@ -11,8 +11,9 @@ export default defineSchema({
   }).index("by_email", ["email"]),
 
   applications: defineTable({
-    candidateId: v.string(), // Reference ID string from candidates table
-    threadId: v.string(),    // Unique LangGraph Thread ID
+    candidateId: v.optional(v.string()), // Reference ID string from candidates table
+    threadId: v.string(),
+    graphState: v.any(),
     status: v.union(
       v.literal("INTAKE"),
       v.literal("VERIFICATION"),
@@ -53,4 +54,11 @@ export default defineSchema({
     details: v.string(),
     timestamp: v.number(),
   }),
+  jobRoles: defineTable({
+    jobId: v.string(),
+    title: v.string(),
+    description: v.string(),
+    requirements: v.array(v.string()),
+    isActive: v.boolean(),
+  }).index("by_jobId", ["jobId"]),
 });

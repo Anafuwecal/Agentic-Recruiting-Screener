@@ -1,10 +1,11 @@
-import { GraphStateType } from "../state.js";
-import { aiModelClient } from "../../utils/llm.js";
+import { GraphStateType } from "../state.ts";
+import { aiModelClient } from "../../utils/llm.ts";
+import { sendRealEmail } from "../../services/email.service.ts";
 
 // Mock email dispatcher utility
-async function dispatchEmail(to: string, subject: string, body: string): Promise<void> {
-  console.log(`\n [OUTBOUND MAIL]: Dispatching to ${to}\nSubject: ${subject}\nBody:\n${body}\n`);
-}
+//async function sendRealEmail(to: string, subject: string, body: string): Promise<void> {
+//  console.log(`\n [OUTBOUND MAIL]: Dispatching to ${to}\nSubject: ${subject}\nBody:\n${body}\n`);
+//}
 
 export async function mailerNode(state: GraphStateType): Promise<Partial<GraphStateType>> {
   console.log(" [Supervisor Mailer AGENT]: Preparing final outbound communications...");
@@ -12,11 +13,11 @@ export async function mailerNode(state: GraphStateType): Promise<Partial<GraphSt
   const candidateEmail = state.candidateInfo?.email || "candidate@unknown.com";
   const candidateName = state.candidateInfo?.name || "Candidate";
   const isPass = state.evaluation?.isPass;
-  const recruiterEmail = "recruiter@company.com"; // In production, pull from env or DB
+  const recruiterEmail = process.env.RECRUITER_EMAIL || "recruiter@company.com";
   
   // 1. Dispatch Recruiter Brief (Internal)
   const recruiterSubject = `Screening Complete: ${candidateName} - ${isPass ? "PASSED" : "FAILED"}`;
-  await dispatchEmail(recruiterEmail, recruiterSubject, state.finalReport || "No report generated.");
+  await sendRealEmail(recruiterEmail, recruiterSubject, state.finalReport!);
 
   // 2. Dispatch Candidate Email (External)
   if (isPass) {
@@ -27,7 +28,7 @@ export async function mailerNode(state: GraphStateType): Promise<Partial<GraphSt
     \n\nYour interview is scheduled for ${new Date(interviewDate).toDateString()}.
     \nJoin link: ${meetLink}\n\nLooking forward to speaking with you!`;
     
-    await dispatchEmail(candidateEmail, "Next Steps: Your Application", passBody);
+    await sendRealEmail(candidateEmail, "Next Steps: Your Application", passBody);
   } else {
     // Generate a highly specific, constructive rejection using the Judge's feedback
     const rejectionPrompt = `
@@ -41,7 +42,7 @@ export async function mailerNode(state: GraphStateType): Promise<Partial<GraphSt
     const response = await aiModelClient.invoke(rejectionPrompt);
     const rejectionBody = response.content.toString();
     
-    await dispatchEmail(candidateEmail, "Update on your application", rejectionBody);
+    await sendRealEmail(candidateEmail, "Update on your application", rejectionBody);
   }
 
   console.log(" [MAILER AGENT]: All final communications dispatched successfully.");
