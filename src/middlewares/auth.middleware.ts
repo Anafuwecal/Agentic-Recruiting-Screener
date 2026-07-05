@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { JwtService } from "../services/jwt.service.ts";
+import jwt from "jsonwebtoken";
 
 const jwtService = new JwtService();
 
