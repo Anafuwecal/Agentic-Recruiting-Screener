@@ -34,7 +34,7 @@
   "scripts": {
     "dev": "tsx watch src/app.ts",
     "start": "tsx src/app.ts",
-    "build": "tsc --noEmit",
+    "build": "npx convex deploy && tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "convex:codegen": "npx convex codegen"
   },
