@@ -23,6 +23,13 @@ app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "UP", engine: "ACTIVE" });
 });
 
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: "online", 
+    message: "AI Recruiting Screener Gateway is running!" 
+  });
+});
+
 // Primary Webhook Entrypoint 
 app.post(
   "/webhooks/incoming-application",
