@@ -8,13 +8,17 @@
  * @module
  */
 
+import type * as workflowThreads from "../workflowThreads.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  workflowThreads: typeof workflowThreads;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

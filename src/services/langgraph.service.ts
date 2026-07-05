@@ -9,6 +9,7 @@ import { decisionNode } from "../graph/nodes/decision.node.ts";
 import { logisticsNode } from "../graph/nodes/logistics.node.ts";
 import { watcherNode } from "../graph/nodes/watcher.node.ts";
 import { mailerNode } from "../graph/nodes/mailer.node.ts";
+import { ConvexService } from "./convex.service.js";
 
 export class LangGraphService {
   private graphEngine;
@@ -66,46 +67,56 @@ export class LangGraphService {
     return workflow.compile();
   }
 
-  public async executeWorkflowPipeline(threadId: string, candidatePayload: CandidateData): Promise<void> {
-    // ... [Keep your existing executeWorkflowPipeline code from Pod 3] ...
+  public async executeWorkflowPipeline(threadId: string, payload: any): Promise<void> {
     console.log(` Starting background Multi-Agent Processing for Thread: ${threadId}`);
+    
     const initialContextState: Partial<GraphStateType> = {
-      candidateInfo: candidatePayload,
+      candidateInfo: payload,
       fluffReport: [],
       pipelineStatus: "INITIALIZED",
     };
-    await this.persistenceService.saveGraphState(threadId, initialContextState);
-    const outputStateSummary = await this.graphEngine.invoke(initialContextState);
-    await this.persistenceService.saveGraphState(threadId, outputStateSummary);
-    console.log(` Engine Workflow Thread Paused cleanly. Current Status: ${outputStateSummary.pipelineStatus}`);
-  }
 
+    // Invoke graph to process the initial application phase
+    const outputStateSummary = await this.graphEngine.invoke(initialContextState);
+
+    // Save state to Convex after processing the initial nodes
+    if (outputStateSummary.pipelineStatus === "AWAITING_ASSESSMENT") {
+        await ConvexService.saveWorkflowState(threadId, payload.candidateId, outputStateSummary);
+        console.log(`⏸ Workflow paused and persisted for thread: ${threadId}`);
+    } else {
+        await ConvexService.saveWorkflowState(threadId, payload.candidateId, outputStateSummary);
+        console.log(` Engine Workflow Thread Completed/Terminated. Current Status: ${outputStateSummary.pipelineStatus}`);
+    }
+  }
   /**
    * The Resumption Trigger: Wakes up the graph engine from Convex storage
    */
-  public async resumeWorkflowExecution(threadId: string, submittedCode: string): Promise<void> {
+  public async resumeWorkflowExecution(threadId: string, codebase: string): Promise<void> {
     console.log(`\n [RESUMPTION GATEWAY]: Waking up Graph Engine for Thread: ${threadId}`);
 
     // 1. Pull the sleeping state from Convex
-    const sleepingState = await this.persistenceService.loadGraphState(threadId);
-    if (!sleepingState) throw new Error("Thread context not found in database.");
+    const savedDbState = await ConvexService.loadWorkflowState(threadId);
+    if (!savedDbState || !savedDbState.graphState) {
+        throw new Error("Thread state not found or expired in database.");
+    }
 
-    // 2. Inject the candidate's solution and flip the status switch
-    const resumedState: Partial<GraphStateType> = {
-      ...sleepingState,
-      assessment: {
-        ...sleepingState.assessment,
-        submittedCode: submittedCode,
-      },
-      pipelineStatus: "SUBMISSION_RECEIVED",
+    // 2. Isolate the graph state and inject the candidate's solution
+    const resumedState = savedDbState.graphState;
+    
+    resumedState.assessment = { 
+      ...resumedState.assessment,
+      submittedCode: codebase 
     };
+    
+    // Status must match the START conditional edge perfectly
+    resumedState.pipelineStatus = "SUBMISSION_RECEIVED"; 
 
-    // 3. Save the updated state and invoke the graph. 
-    // The Entry Router will see "SUBMISSION_RECEIVED" and skip the top funnel!
-    await this.persistenceService.saveGraphState(threadId, resumedState);
+    // 3. Invoke the graph with the resumed state. 
+    // The Entry Router will see "SUBMISSION_RECEIVED" and route straight to decision_node!
     const outputStateSummary = await this.graphEngine.invoke(resumedState);
     
-    await this.persistenceService.saveGraphState(threadId, outputStateSummary);
+    // 4. Save the finalized state back to Convex
+    await ConvexService.saveWorkflowState(threadId, savedDbState.candidateId, outputStateSummary);
     console.log(` Engine Workflow Resumed and processed. Current Status: ${outputStateSummary.pipelineStatus}`);
   }
 }

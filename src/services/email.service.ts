@@ -2,25 +2,24 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail", // Change if using SendGrid/Resend
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 
 export async function sendRealEmail(to: string, subject: string, body: string): Promise<void> {
-  console.log(` [EMAIL SERVICE]: Sending physical email to ${to}...`);
+  // Graceful degradation check
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn(` [MOCK EMAIL]: SMTP credentials missing. Mocking email to ${to}`);
+    console.log(`Subject: ${subject}\nBody: ${body}`);
+    return; // Exit early, preventing crashes
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+  });
+
   try {
-    await transporter.sendMail({
-      from: `"AI Recruiter" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text: body,
-    });
-    console.log(` [EMAIL SERVICE]: Delivered successfully to ${to}`);
+    await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, text: body });
+    console.log(` [EMAIL]: Delivered to ${to}`);
   } catch (error) {
-    console.error(` [EMAIL SERVICE]: Failed to send email to ${to}`, error);
+    console.error(` [EMAIL]: Failed to send to ${to}`, error);
   }
 }

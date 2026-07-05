@@ -35,7 +35,7 @@ export async function logisticsNode(state: GraphStateType): Promise<Partial<Grap
   return {
     logistics: {
       interviewDate: logisticsResult.scheduledTime ?? undefined,
-    meetLink: logisticsResult.meetLink ?? undefined,
+      meetLink: logisticsResult.meetLink ?? undefined,
     },
     pipelineStatus: "LOGISTICS_COMPLETED",
   };

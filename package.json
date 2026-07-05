@@ -26,9 +26,11 @@
     "zod": "^4.4.3"
   },
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/app.js",
-    "dev": "tsx watch src/app.ts"
+    "dev": "tsx watch src/app.ts",
+    "start": "tsx src/app.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "convex:codegen": "npx convex codegen"
   },
   "repository": {
     "type": "git",

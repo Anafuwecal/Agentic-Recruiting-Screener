@@ -29,8 +29,18 @@ app.post(
   upload.single("resume"),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      //Parse payload through Zod validation guard
-      const { name, email, jobId, githubUrl } = req.body;
+      // 1. Enforce Zod Validation Boundary
+      const validatedPayload = IncomingApplicationSchema.parse(req.body);
+
+      const { 
+        senderName: name, 
+        senderEmail: email, 
+        githubUrl 
+      } = validatedPayload;
+
+      // 3. Extract jobId from the raw request body (since it's not in the Zod schema)
+      const jobId = req.body.jobId; 
+
       const resumeFile = req.file;
 
       if (!resumeFile) throw new Error("Resume file (PDF/DOCX) is required.");

@@ -10,7 +10,7 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 
-  applications: defineTable({
+  workflowThreads: defineTable({
     candidateId: v.optional(v.string()), // Reference ID string from candidates table
     threadId: v.string(),
     graphState: v.any(),
