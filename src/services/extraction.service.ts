@@ -1,7 +1,6 @@
 import * as pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import AdmZip from "adm-zip";
-import type { IZipEntry } from "adm-zip";
 import * as cheerio from "cheerio";
 import axios from "axios";
 import fs from "fs";
@@ -30,7 +29,7 @@ export class ExtractionService {
     const zipEntries = zip.getEntries();
     let combinedCode = "";
 
-    zipEntries.forEach((entry: IZipEntry) => {
+    zipEntries.forEach((entry: any) => {
       // Skip node_modules, build folders, and hidden files
       if (!entry.isDirectory && !entry.entryName.includes("node_modules/") && !entry.entryName.startsWith(".")) {
         combinedCode += `\n\n--- FILE: ${entry.entryName} ---\n`;
